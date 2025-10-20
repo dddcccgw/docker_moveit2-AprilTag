@@ -1,0 +1,89 @@
+services:
+  viperx300s:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: viperx300s-ros2:humble
+    container_name: viperx300s_robot
+    
+    # GPU 支援 (NVIDIA Container Runtime)
+    runtime: nvidia
+    
+    # 特權模式以完整存取 USB 裝置
+    privileged: true
+    
+    # 網路模式：使用 host 以簡化 ROS2 通訊
+    network_mode: host
+    
+    # 環境變數
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=/tmp/.docker.xauth
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    
+    # USB 裝置直通 (RealSense 和 Dynamixel U2D2)
+    devices:
+      # Dynamixel U2D2 設備 (FTDI USB-to-Serial) - 設定讀寫權限
+      - /dev/ttyUSB0:/dev/ttyUSB0:rwm
+      # RealSense 相機 (透過 USB 訪問)
+      - /dev/bus/usb:/dev/bus/usb:rwm
+      # RealSense video 設備節點 (支援多台相機)
+      - /dev/video0:/dev/video0:rwm
+      - /dev/video1:/dev/video1:rwm
+      - /dev/video2:/dev/video2:rwm
+      - /dev/video3:/dev/video3:rwm
+      - /dev/video4:/dev/video4:rwm
+      - /dev/video5:/dev/video5:rwm
+      - /dev/video6:/dev/video6:rwm
+      - /dev/video7:/dev/video7:rwm
+      - /dev/video8:/dev/video8:rwm
+      - /dev/video9:/dev/video9:rwm
+      - /dev/video10:/dev/video10:rwm
+      - /dev/video11:/dev/video11:rwm
+      
+    # 掛載目錄
+    volumes:
+      - ../:/workspace
+      # X11 socket for GUI applications (RViz2, MoveIt2)
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.docker.xauth:/tmp/.docker.xauth:rw
+      
+      # 本地 ROS2 工作區掛載到容器內
+      - ../ros2_ws:/workspace/ros2_ws:rw
+      
+      # 共享記憶體 (加速 ROS2 DDS 通訊)
+      - /dev/shm:/dev/shm
+      
+      # 保留 bash history
+      # - ./bash_history:/root/.bash_history
+    
+    # 工作目錄
+    working_dir: /workspace
+    
+    # 啟動後保持容器執行
+    stdin_open: true
+    tty: true
+    
+    # 容器重啟政策
+    restart: unless-stopped
+    
+    # GPU 資源配置 (推薦使用)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  # 使用所有 GPU，或指定數量如 count: 1
+              capabilities: [gpu, compute, utility]
+    
+    # 資源限制 (可選)
+    # 如需限制 CPU 和記憶體，可取消註解：
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 8G
+    
+    command: sleep infinity
