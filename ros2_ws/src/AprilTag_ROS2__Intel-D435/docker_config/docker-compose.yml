@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  apriltag_ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apriltag_humble
+    image: apriltag_ros2:humble
+    
+    # Keep container running
+    stdin_open: true
+    tty: true
+    
+    # Mount workspace
+    volumes:
+      - ./:/root/ws/src/apriltag_ros2_intel_d435/
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ~/.Xauthority:/root/.Xauthority:rw
+    
+    # Environment variables for X11 display
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/root/.Xauthority
+      - ROS_DOMAIN_ID=0
+    
+    # USB device access (for Intel RealSense D435)
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    
+    # Network
+    network_mode: host
+    
+    # Allow privileged mode for camera access
+    privileged: true
+    
+    # Working directory
+    working_dir: /root/ws

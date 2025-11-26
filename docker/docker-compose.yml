@@ -1,89 +1,105 @@
+# ViperX-300S AprilTag Grasping System - Docker Compose Configuration
+# 
+# This configuration provides:
+# - USB device passthrough for robot arm (Dynamixel U2D2) and camera (RealSense D435)
+# - X11 display forwarding for RViz2 and GUI applications
+# - Host network mode for simplified ROS2 DDS communication
+# - Volume mounts for live code editing
+#
+# Usage:
+#   Build:  docker compose build
+#   Start:  docker compose up -d
+#   Enter:  docker exec -it viperx300s_robot bash
+#   Stop:   docker compose down
+
 services:
   viperx300s:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     image: viperx300s-ros2:humble
     container_name: viperx300s_robot
     
-    # GPU 支援 (NVIDIA Container Runtime)
-    runtime: nvidia
-    
-    # 特權模式以完整存取 USB 裝置
+    # Privileged mode for full USB device access (required for hardware control)
     privileged: true
     
-    # 網路模式：使用 host 以簡化 ROS2 通訊
+    # Host network mode simplifies ROS2 DDS communication (no port mapping needed)
     network_mode: host
     
-    # 環境變數
+    # Environment Variables
     environment:
+      # X11 Display (for RViz2, GUI applications)
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=/tmp/.docker.xauth
+      
+      # ROS2 Configuration
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=all
+      - ROS_LOCALHOST_ONLY=0
+      
+      # NVIDIA GPU Support (uncomment if using GPU features)
+      # - NVIDIA_VISIBLE_DEVICES=all
+      # - NVIDIA_DRIVER_CAPABILITIES=all
     
-    # USB 裝置直通 (RealSense 和 Dynamixel U2D2)
+    # USB Device Passthrough
     devices:
-      # Dynamixel U2D2 設備 (FTDI USB-to-Serial) - 設定讀寫權限
+      # ViperX-300S Robot Arm (Dynamixel U2D2 - FTDI USB-to-Serial Converter)
+      # Note: Device name may vary. Check with 'ls -l /dev/ttyUSB*' on host
       - /dev/ttyUSB0:/dev/ttyUSB0:rwm
-      # RealSense 相機 (透過 USB 訪問)
+      
+      # Intel RealSense D435 Camera (USB bus access for all USB devices)
       - /dev/bus/usb:/dev/bus/usb:rwm
-      # RealSense video 設備節點 (支援多台相機)
+      
+      # Video devices (RealSense camera streams)
+      # Multiple video devices support multiple cameras or camera streams (RGB, depth, IR)
       - /dev/video0:/dev/video0:rwm
       - /dev/video1:/dev/video1:rwm
       - /dev/video2:/dev/video2:rwm
       - /dev/video3:/dev/video3:rwm
       - /dev/video4:/dev/video4:rwm
       - /dev/video5:/dev/video5:rwm
-      - /dev/video6:/dev/video6:rwm
-      - /dev/video7:/dev/video7:rwm
-      - /dev/video8:/dev/video8:rwm
-      - /dev/video9:/dev/video9:rwm
-      - /dev/video10:/dev/video10:rwm
-      - /dev/video11:/dev/video11:rwm
-      
-    # 掛載目錄
+    
+    # Volume Mounts
     volumes:
-      - ../:/workspace
-      # X11 socket for GUI applications (RViz2, MoveIt2)
+      # Project root directory (live code editing)
+      - ../:/workspace:rw
+      
+      # X11 socket for GUI applications (RViz2, MoveIt2 visualization)
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /tmp/.docker.xauth:/tmp/.docker.xauth:rw
       
-      # 本地 ROS2 工作區掛載到容器內
-      - ../ros2_ws:/workspace/ros2_ws:rw
-      
-      # 共享記憶體 (加速 ROS2 DDS 通訊)
+      # Shared memory for ROS2 DDS communication (improves performance)
       - /dev/shm:/dev/shm
       
-      # 保留 bash history
-      # - ./bash_history:/root/.bash_history
+      # Persist bash history (optional - uncomment to enable)
+      # - ./bash_history:/root/.bash_history:rw
     
-    # 工作目錄
+    # Working directory inside container
     working_dir: /workspace
     
-    # 啟動後保持容器執行
+    # Interactive terminal support
     stdin_open: true
     tty: true
     
-    # 容器重啟政策
+    # Container restart policy
     restart: unless-stopped
     
-    # GPU 資源配置 (推薦使用)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all  # 使用所有 GPU，或指定數量如 count: 1
-              capabilities: [gpu, compute, utility]
+    # NVIDIA GPU Configuration (uncomment to enable GPU support)
+    # runtime: nvidia
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all  # Use all GPUs, or specify count (e.g., count: 1)
+    #           capabilities: [gpu, compute, utility]
     
-    # 資源限制 (可選)
-    # 如需限制 CPU 和記憶體，可取消註解：
+    # Resource Limits (optional - uncomment to enable)
+    # deploy:
     #   resources:
     #     limits:
-    #       cpus: '4'
-    #       memory: 8G
+    #       cpus: '4'      # Limit to 4 CPU cores
+    #       memory: 8G     # Limit to 8GB RAM
     
+    # Keep container running
     command: sleep infinity

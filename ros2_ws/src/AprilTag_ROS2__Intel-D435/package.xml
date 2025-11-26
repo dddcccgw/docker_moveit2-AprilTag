@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>apriltag_ros2_intel_d435</name>
+  <version>0.1.0</version>
+  <description>
+    AprilTag ROS 2 integration for Intel RealSense D435 camera.
+    
+    This metapackage provides AprilTag detection, camera calibration, pose
+    validation, and hand-eye calibration tools for Intel RealSense D435 cameras
+    in ROS 2 Humble environment.
+  </description>
+
+  <maintainer email="gwchen24@gmail.com">David</maintainer>
+  <license>BSD</license>
+
+  <url type="website">https://github.com/dddcccgw/AprilTag_ROS2_intel-D435</url>
+  <url type="repository">https://github.com/dddcccgw/AprilTag_ROS2_intel-D435</url>
+  <url type="bugtracker">https://github.com/dddcccgw/AprilTag_ROS2_intel-D435/issues</url>
+
+  <author>David</author>
+
+  <!-- Build tool -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Runtime dependencies on member packages -->
+  <exec_depend>apriltag_detector</exec_depend>
+
+  <!-- Optional: other member packages -->
+  <!-- <exec_depend>apriltag_ros</exec_depend> -->
+  <!-- <exec_depend>apriltag_msgs</exec_depend> -->
+
+  <!-- Test dependencies -->
+  <test_depend>ament_cmake_python</test_depend>
+
+  <!-- Export as metapackage -->
+  <export>
+    <metapackage />
+  </export>
+</package>

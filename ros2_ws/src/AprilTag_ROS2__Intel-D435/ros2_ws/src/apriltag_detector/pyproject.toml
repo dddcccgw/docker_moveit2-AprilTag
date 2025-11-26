@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apriltag_detector"
+version = "0.1.0"
+description = "AprilTag detection and camera position validation with Intel D435 camera"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "BSD"}
+authors = [
+    {name = "David", email = "david@example.com"},
+]
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "pyrealsense2",
+    "dt-apriltags",
+    "scipy",
+]
+
+[project.scripts]
+apriltag_map = "apriltag_detector.apriltag_map:main"
+camera_validator = "apriltag_detector.camera_position_validator:main"
+record_calibration = "apriltag_detector.record_calibration_data:main"

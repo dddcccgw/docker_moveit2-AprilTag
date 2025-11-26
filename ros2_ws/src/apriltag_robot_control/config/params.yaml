@@ -1,0 +1,59 @@
+# AprilTag Robot Control Configuration
+
+# AprilTag detection settings
+apriltag:
+  tag_size: 0.0625  # 6.25 cm
+  tag_family: "tag36h11"
+  
+  # Calibration tags (known positions in world frame)
+  calibration_tags:
+    - id: 0
+      position: [0.0, 0.0, 0.0]  # Origin
+    - id: 1
+      position: [0.15, 0.0, 0.0]  # X-axis (15cm)
+    - id: 2
+      position: [0.0, 0.0, 0.15]  # Z-axis (15cm)
+  
+  # Target tag
+  target_tag_id: 3
+
+# Camera settings
+camera:
+  frame_id: "camera_link"
+  frame_rate: 30
+  width: 640
+  height: 480
+
+# World frame settings
+world_frame:
+  frame_id: "world"
+  origin_tag_id: 0
+
+# Robot settings
+robot:
+  model: "vx300s"
+  name: "vx300s"
+  base_frame: "vx300s/base_link"
+  ee_frame: "vx300s/ee_gripper_link"
+
+# Grasp settings
+grasp:
+  approach_height: 0.15  # Height above target for approach (m)
+  grasp_height: 0.02     # Final height above target for grasp (m)
+  retreat_height: 0.15   # Height to retreat after grasp (m)
+  offset_z: 0.05         # Vertical offset for grasp pose (m)
+
+# Motion settings
+motion:
+  # Set use_moveit to false if you get MoveIt2 crashes or want direct control
+  # Set to true for collision-aware planning (requires MoveIt2 to be running)
+  use_moveit: false      # Use MoveIt2 for motion planning (true) or direct Interbotix API (false)
+  planning_group: "interbotix_arm"  # MoveIt planning group name
+  moving_time: 2.0       # Time for arm movements (s)
+  accel_time: 0.5        # Acceleration time (s)
+  gripper_pressure: 0.5  # Gripper pressure (0-1)
+
+# Temporal filtering
+filtering:
+  camera_pose_window: 10
+  target_pose_window: 5

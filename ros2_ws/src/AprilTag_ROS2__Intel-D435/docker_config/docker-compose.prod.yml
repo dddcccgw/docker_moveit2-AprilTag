@@ -1,0 +1,113 @@
+version: '3.8'
+
+# Production-grade Docker Compose configuration for AprilTag ROS2 Humble
+
+services:
+  apriltag_ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ROS_DISTRO: humble
+    
+    container_name: apriltag_humble
+    image: apriltag_ros2:humble-latest
+    
+    # Interactive terminal
+    stdin_open: true
+    tty: true
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Volume mounts
+    volumes:
+      # Source code
+      - ./apriltag_detector:/root/ws/src/apriltag_ros2_intel_d435/apriltag_detector
+      - ./apriltag:/root/ws/src/apriltag_ros2_intel_d435/apriltag
+      - ./apriltag_msgs:/root/ws/src/apriltag_ros2_intel_d435/apriltag_msgs
+      - ./apriltag_ros:/root/ws/src/apriltag_ros2_intel_d435/apriltag_ros
+      
+      # Data and output
+      - ./data:/root/data
+      - ./results:/root/results
+      - ./logs:/root/logs
+      
+      # Workspace (persist builds)
+      - apriltag_workspace:/root/ws/build
+      - apriltag_install:/root/ws/install
+      
+      # X11 display (for GUI applications)
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ~/.Xauthority:/root/.Xauthority:rw
+    
+    # Environment variables
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - XAUTHORITY=/root/.Xauthority
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-0}
+      - ROS_LOG_DIR=/root/logs
+      - PYTHONUNBUFFERED=1
+    
+    # Hardware access
+    devices:
+      - /dev/bus/usb:/dev/bus/usb  # USB devices (Intel RealSense)
+      - /dev/dri:/dev/dri           # GPU access (optional)
+    
+    # Network configuration
+    network_mode: host
+    
+    # Privileged mode for hardware access
+    privileged: true
+    
+    # Resource limits (optional)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 8G
+    #     reservations:
+    #       cpus: '2'
+    #       memory: 4G
+    
+    # Working directory
+    working_dir: /root/ws
+    
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "bash", "-c", "source /root/ws/install/setup.bash && ros2 node list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    depends_on:
+      - ros2_daemon
+
+  # Optional: ROS 2 daemon service
+  ros2_daemon:
+    image: apriltag_ros2:humble-latest
+    container_name: apriltag_ros2_daemon
+    command: /bin/bash -c "source /root/ws/install/setup.bash && ros2 daemon start && sleep infinity"
+    volumes:
+      - apriltag_workspace:/root/ws/build
+      - apriltag_install:/root/ws/install
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+    network_mode: host
+    privileged: true
+    restart: unless-stopped
+    depends_on:
+      - apriltag_ros2
+
+volumes:
+  apriltag_workspace:
+    driver: local
+  apriltag_install:
+    driver: local
+
+networks:
+  default:
+    name: apriltag_network
+    driver: bridge

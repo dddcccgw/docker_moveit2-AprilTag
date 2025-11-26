@@ -1,25 +1,41 @@
 #!/bin/bash
+# ViperX-300S Container Stop Script
+# 
+# This script gracefully stops the Docker container and cleans up resources
 
-# 切換到 docker 目錄
+set -e  # Exit on error
+
+# Change to docker directory
 cd "$(dirname "$0")"
 
-echo "======================================"
-echo "Stopping ViperX-300S Container..."
-echo "======================================"
+CONTAINER_NAME="viperx300s_robot"
 
-# 停止容器
+echo "════════════════════════════════════════════════════════════"
+echo "  Stopping ViperX-300S Container"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+# Check if container is running
+if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
+    echo "ℹ Container is not running"
+    echo ""
+    # Check if container exists but is stopped
+    if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
+        echo "Removing stopped container..."
+        docker compose down
+    else
+        echo "No container found. Nothing to do."
+    fi
+    exit 0
+fi
+
+echo "Stopping container gracefully..."
 docker compose down
 
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "======================================"
-    echo "✓ Container stopped successfully!"
-    echo "======================================"
-    echo ""
-else
-    echo ""
-    echo "======================================"
-    echo "✗ Failed to stop container."
-    echo "======================================"
-    exit 1
-fi
+echo ""
+echo "════════════════════════════════════════════════════════════"
+echo "  ✓ Container stopped successfully!"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+echo "To start again: ./run.sh"
+echo "════════════════════════════════════════════════════════════"

@@ -202,7 +202,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_sim',
-            default_value='false',
+            default_value='true',
             choices=('true', 'false'),
             description=(
                 'if `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the'

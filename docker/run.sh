@@ -1,89 +1,131 @@
 #!/bin/bash
+# ViperX-300S Container Startup Script
+# 
+# This script:
+# 1. Configures X11 display forwarding for GUI applications (RViz2)
+# 2. Starts the Docker container in background
+# 3. Sets up USB device symlinks for robot hardware
+# 4. Optionally enters the container shell
 
-# 切換到 docker 目錄
+set -e  # Exit on error
+
+# Change to docker directory
 cd "$(dirname "$0")"
 
 CONTAINER_NAME="viperx300s_robot"
 
-# 檢查容器是否已經在執行
+# Check if container is already running
 if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
-    echo "======================================"
-    echo "Container is already running!"
-    echo "======================================"
+    echo "════════════════════════════════════════════════════════════"
+    echo "  Container is already running!"
+    echo "════════════════════════════════════════════════════════════"
     echo ""
     
-    # 確保 ttyDXL 符號連結存在
+    # Verify hardware connections
+    echo "Checking hardware connections..."
     docker exec $CONTAINER_NAME bash -c '
-        if [ -e "/dev/ttyUSB0" ] && [ ! -e "/dev/ttyDXL" ]; then
-            ln -sf /dev/ttyUSB0 /dev/ttyDXL
-            echo "✓ Created symlink: /dev/ttyDXL -> /dev/ttyUSB0"
+        # Check robot arm connection
+        if [ -e "/dev/ttyUSB0" ]; then
+            echo "  ✓ Robot arm detected: /dev/ttyUSB0"
+            if [ ! -e "/dev/ttyDXL" ]; then
+                ln -sf /dev/ttyUSB0 /dev/ttyDXL
+                echo "  ✓ Created symlink: /dev/ttyDXL -> /dev/ttyUSB0"
+            fi
+        else
+            echo "  ⚠ Robot arm NOT detected: /dev/ttyUSB0"
+            echo "    (Use hardware_type:=fake for simulation)"
         fi
-    ' 2>/dev/null
+        
+        # Check camera connection
+        if command -v rs-enumerate-devices &> /dev/null; then
+            if rs-enumerate-devices 2>/dev/null | grep -q "Intel RealSense"; then
+                echo "  ✓ RealSense camera detected"
+            else
+                echo "  ⚠ RealSense camera NOT detected"
+            fi
+        fi
+    ' 2>/dev/null || true
     
+    echo ""
     echo "Entering container..."
     docker exec -it $CONTAINER_NAME bash
     exit 0
 fi
 
-echo "======================================"
-echo "Starting ViperX-300S Container..."
-echo "======================================"
+echo "════════════════════════════════════════════════════════════"
+echo "  Starting ViperX-300S Container"
+echo "════════════════════════════════════════════════════════════"
+echo ""
 
-# 設定 X11 授權 (允許 Docker 容器使用 GUI)
+# Configure X11 for GUI applications (RViz2, MoveIt2 visualization)
+echo "Configuring X11 display forwarding..."
 XAUTH=/tmp/.docker.xauth
 if [ ! -f $XAUTH ]; then
     touch $XAUTH
-    xauth nlist $DISPLAY | sed -e 's/^..../ffff/' | xauth -f $XAUTH nmerge -
+    xauth nlist $DISPLAY | sed -e 's/^..../ffff/' | xauth -f $XAUTH nmerge - 2>/dev/null || true
     chmod 644 $XAUTH
 fi
 
-# 允許本地 X server 接受連線
-xhost +local:docker > /dev/null 2>&1
+# Allow Docker containers to connect to X server
+xhost +local:docker > /dev/null 2>&1 || echo "⚠ Warning: Could not configure xhost (GUI may not work)"
 
-# 啟動容器 (背景執行)
+echo "Starting container in background..."
+echo ""
+
+# Start container
 docker compose up -d
 
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "======================================"
-    echo "✓ Container started successfully!"
-    echo "======================================"
-    echo ""
-    
-    # 在容器內創建 ttyDXL 符號連結 (如果 ttyUSB0 存在)
-    docker exec $CONTAINER_NAME bash -c '
-        if [ -e "/dev/ttyUSB0" ]; then
-            ln -sf /dev/ttyUSB0 /dev/ttyDXL
-            echo "✓ Created symlink: /dev/ttyDXL -> /dev/ttyUSB0"
-        fi
-    ' 2>/dev/null
-    
-    # 詢問是否要進入容器
-    read -p "Do you want to enter the container now? (Y/n): " -n 1 -r
-    echo ""
-    
-    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-        echo "Entering container..."
-        docker exec -it $CONTAINER_NAME bash
+echo ""
+echo "════════════════════════════════════════════════════════════"
+echo "  ✓ Container started successfully!"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+# Setup hardware device symlinks
+echo "Setting up hardware connections..."
+docker exec $CONTAINER_NAME bash -c '
+    # Create symlink for robot arm
+    if [ -e "/dev/ttyUSB0" ]; then
+        ln -sf /dev/ttyUSB0 /dev/ttyDXL
+        echo "  ✓ Robot arm: /dev/ttyUSB0 -> /dev/ttyDXL"
     else
-        echo ""
-        echo "Container is running in background."
-        echo ""
-        echo "To enter the container later:"
-        echo "  ./run.sh"
-        echo "  or: docker exec -it $CONTAINER_NAME bash"
-        echo ""
-        echo "To view logs:"
-        echo "  docker compose logs -f"
-        echo ""
-        echo "To stop:"
-        echo "  ./stop.sh"
-        echo ""
+        echo "  ⚠ Robot arm NOT detected (use hardware_type:=fake for simulation)"
     fi
+    
+    # Check camera
+    if command -v rs-enumerate-devices &> /dev/null; then
+        if rs-enumerate-devices 2>/dev/null | grep -q "Intel RealSense"; then
+            echo "  ✓ RealSense camera detected"
+        else
+            echo "  ⚠ RealSense camera NOT detected"
+        fi
+    fi
+' 2>/dev/null || true
+
+echo ""
+echo "Container Status:"
+echo "  Name: $CONTAINER_NAME"
+echo "  Image: viperx300s-ros2:humble"
+echo ""
+
+# Ask if user wants to enter container
+read -p "Enter container now? (Y/n): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+    echo ""
+    echo "Entering container..."
+    echo "════════════════════════════════════════════════════════════"
+    docker exec -it $CONTAINER_NAME bash
 else
     echo ""
-    echo "======================================"
-    echo "✗ Failed to start container."
-    echo "======================================"
-    exit 1
+    echo "Container is running in background."
+    echo ""
+    echo "Useful commands:"
+    echo "  Enter container:  ./run.sh  (or docker exec -it $CONTAINER_NAME bash)"
+    echo "  View logs:        docker compose logs -f"
+    echo "  Stop container:   ./stop.sh"
+    echo ""
+    echo "Quick Start Guide: ../README.md"
+    echo "════════════════════════════════════════════════════════════"
 fi
